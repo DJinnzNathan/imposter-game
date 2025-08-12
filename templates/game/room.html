@@ -50,6 +50,10 @@
             box-shadow: 0 2px 16px 0 rgba(0,0,0,0.10);
             position: relative;
             overflow: hidden;
+            -webkit-user-select: none; /* Safari */        
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
         }
         .btn-row {
             display: flex;
@@ -101,7 +105,7 @@
 <body class="bg-[#0070b7] text-white min-h-screen flex flex-col items-center justify-center p-6">
     <div class="room-container w-full max-w-md bg-gray-800 rounded-lg shadow-lg">
         <h2 class="text-2xl font-bold mb-6 text-center" style="font-family: 'Montserrat', sans-serif;">Raum: {{ room_name }}</h2>
-        <div id="player-list" class="mb-6 text-center"></div>
+        <div id="player-list" class="mb-6 p-6 text-center"></div>
         <div class="btn-row">
             <button id="start-btn" style="display:none" class="custom-btn">Spiel starten</button>
             <button id="restart-btn" style="display:none" class="custom-btn">Neue Runde</button>
@@ -134,8 +138,10 @@
             if (data.type === 'word') {
                 document.getElementById('word-box').style.display = '';
                 document.getElementById('word-content').innerText = data.word ? `Dein Wort: ${data.word}` : 'Du bist der Imposter!';
-                document.getElementById('cover-card').style.top = '0';
-                document.getElementById('cover-card').style.display = '';
+                const coverCard = document.getElementById('cover-card');
+                coverCard.style.top = '0';
+                coverCard.style.display = '';
+                coverCard.dataset.revealed = 'false';
                 if (playerName === hostName) {
                     document.getElementById('restart-btn').style.display = '';
                 }
@@ -163,18 +169,16 @@
             if (!dragging) return;
             let delta = startY - e.clientY;
             if (delta < 0) delta = 0;
+            // Begrenzung: maximal 110px hochziehen
+            if (delta > 110) delta = 110;
             cover.style.top = `-${delta}px`;
         });
         document.addEventListener('mouseup', function(e) {
             if (!dragging) return;
             let delta = startY - e.clientY;
             cover.classList.remove('dragging');
-            if (delta > 120) {
-                cover.style.top = '-120%';
-                setTimeout(() => { cover.style.display = 'none'; }, 300);
-            } else {
-                cover.style.top = '0';
-            }
+            // Beim Loslassen: Karte springt zurück
+            cover.style.top = '0';
             dragging = false;
         });
         // Touch support
@@ -187,18 +191,14 @@
             if (!dragging) return;
             let delta = startY - e.touches[0].clientY;
             if (delta < 0) delta = 0;
+            if (delta > 110) delta = 110;
             cover.style.top = `-${delta}px`;
         });
         document.addEventListener('touchend', function(e) {
             if (!dragging) return;
-            let delta = startY - (e.changedTouches[0]?.clientY || 0);
+            // Beim Loslassen: Karte springt zurück
             cover.classList.remove('dragging');
-            if (delta > 120) {
-                cover.style.top = '-120%';
-                setTimeout(() => { cover.style.display = 'none'; }, 300);
-            } else {
-                cover.style.top = '0';
-            }
+            cover.style.top = '0';
             dragging = false;
         });
     </script>
