@@ -1,0 +1,17 @@
+[project]
+name = "imposter-game"
+version = "0.1.0"
+description = "A simple imposter game running over python"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "channels>=4.0",
+    "channels-redis>=4.0",
+    "daphne>=4.0",
+    "django>=5.2",
+]
+
+[project.scripts]
+start = "daphne -b 0.0.0.0 -p 8000 imposter_game.asgi:application"
+tailwind = "npx tailwindcss -i ./static/src/styles.css -o ./static/dist/styles.css --minify"
+collectstatic = "python manage.py collectstatic --noinput"
