@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raum {{ room_name }} | Imposter Game</title>
+    <link href="/static/dist/styles.css" rel="stylesheet">
+    <style>
+        .custom-btn {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.15rem;
+            border-radius: 1rem;
+            background: #fff;
+            color: #0070b7;
+            font-weight: bold;
+            padding: 0.9rem 2rem;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            margin: 0 0.5rem 0 0;
+            box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
+        }
+        .custom-btn:last-child {
+            margin-right: 0;
+        }
+        .custom-btn:hover {
+            background: #e0e0e0;
+            color: #005a8c;
+        }
+        .custom-btn-secondary {
+            background: #e0e0e0;
+            color: #0070b7;
+            opacity: 0.7;
+            font-weight: 500;
+        }
+        .word-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2.5rem auto 0 auto;
+            padding: 2rem 2.5rem;
+            background: #fff;
+            color: #0070b7;
+            border-radius: 1.5rem;
+            font-size: 2rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: bold;
+            min-width: 220px;
+            min-height: 60px;
+            box-shadow: 0 2px 16px 0 rgba(0,0,0,0.10);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-row {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+        .room-container {
+            box-sizing: border-box;
+            padding: 2.5rem 2rem 2rem 2rem;
+        }
+        .lobby-btn-bar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            padding-bottom: 2.5rem;
+            z-index: 50;
+            background: transparent;
+            pointer-events: none;
+        }
+        .lobby-btn-bar a {
+            pointer-events: auto;
+        }
+        .cover-card {
+            position: absolute;
+            left: 0; right: 0; top: 0;
+            height: 100%;
+            background: linear-gradient(120deg, #0070b7 80%, #fff 100%);
+            border-radius: 1.5rem 1.5rem 1.5rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.3rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            cursor: grab;
+            user-select: none;
+            transition: top 0.3s;
+        }
+        .cover-card.dragging {
+            transition: none;
+        }
+    </style>
+</head>
+<body class="bg-[#0070b7] text-white min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="room-container w-full max-w-md bg-gray-800 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-bold mb-6 text-center" style="font-family: 'Montserrat', sans-serif;">Raum: {{ room_name }}</h2>
+        <div id="player-list" class="mb-6 text-center"></div>
+        <div class="btn-row">
+            <button id="start-btn" style="display:none" class="custom-btn">Spiel starten</button>
+            <button id="restart-btn" style="display:none" class="custom-btn">Neue Runde</button>
+        </div>
+        <div id="word-box" class="word-box" style="display:none;">
+            <span id="word-content"></span>
+            <div id="cover-card" class="cover-card">Ziehe nach oben, um das Wort aufzudecken</div>
+        </div>
+    </div>
+    <div class="lobby-btn-bar">
+        <a href="/" class="custom-btn custom-btn-secondary" style="font-size:1rem; padding:0.7rem 1.5rem;">Zurück zur Lobby</a>
+    </div>
+    <script>
+        const roomName = "{{ room_name }}";
+        const hostName = "{{ host }}";
+        const urlParams = new URLSearchParams(window.location.search);
+        let playerName = urlParams.get('host') || prompt('Dein Name?');
+        const ws = new WebSocket(`ws://${window.location.host}/ws/room/${roomName}/`);
+        ws.onopen = () => {
+            ws.send(JSON.stringify({type: 'join', user: playerName}));
+            if (playerName === hostName) {
+                document.getElementById('start-btn').style.display = '';
+            }
+        };
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'players') {
+                document.getElementById('player-list').innerHTML = '<b>Spieler:</b> ' + data.players.join(', ');
+            }
+            if (data.type === 'word') {
+                document.getElementById('word-box').style.display = '';
+                document.getElementById('word-content').innerText = data.word ? `Dein Wort: ${data.word}` : 'Du bist der Imposter!';
+                document.getElementById('cover-card').style.top = '0';
+                document.getElementById('cover-card').style.display = '';
+                if (playerName === hostName) {
+                    document.getElementById('restart-btn').style.display = '';
+                }
+            }
+        };
+        document.getElementById('start-btn').onclick = () => {
+            ws.send(JSON.stringify({type: 'start', user: playerName}));
+        };
+        document.getElementById('restart-btn').onclick = () => {
+            ws.send(JSON.stringify({type: 'restart', user: playerName}));
+            document.getElementById('restart-btn').style.display = 'none';
+            document.getElementById('word-box').style.display = 'none';
+        };
+
+        // Drag-to-reveal für das Wort
+        const cover = document.getElementById('cover-card');
+        let startY = null;
+        let dragging = false;
+        cover.addEventListener('mousedown', function(e) {
+            dragging = true;
+            startY = e.clientY;
+            cover.classList.add('dragging');
+        });
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            let delta = startY - e.clientY;
+            if (delta < 0) delta = 0;
+            cover.style.top = `-${delta}px`;
+        });
+        document.addEventListener('mouseup', function(e) {
+            if (!dragging) return;
+            let delta = startY - e.clientY;
+            cover.classList.remove('dragging');
+            if (delta > 120) {
+                cover.style.top = '-120%';
+                setTimeout(() => { cover.style.display = 'none'; }, 300);
+            } else {
+                cover.style.top = '0';
+            }
+            dragging = false;
+        });
+        // Touch support
+        cover.addEventListener('touchstart', function(e) {
+            dragging = true;
+            startY = e.touches[0].clientY;
+            cover.classList.add('dragging');
+        });
+        document.addEventListener('touchmove', function(e) {
+            if (!dragging) return;
+            let delta = startY - e.touches[0].clientY;
+            if (delta < 0) delta = 0;
+            cover.style.top = `-${delta}px`;
+        });
+        document.addEventListener('touchend', function(e) {
+            if (!dragging) return;
+            let delta = startY - (e.changedTouches[0]?.clientY || 0);
+            cover.classList.remove('dragging');
+            if (delta > 120) {
+                cover.style.top = '-120%';
+                setTimeout(() => { cover.style.display = 'none'; }, 300);
+            } else {
+                cover.style.top = '0';
+            }
+            dragging = false;
+        });
+    </script>
+</body>
+</html>

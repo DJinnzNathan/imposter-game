@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imposter Game</title>
+    <link href="/static/dist/styles.css" rel="stylesheet">
+    <style>
+        .custom-input {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.25rem;
+            border-radius: 1rem;
+            color: #0070b7;
+            background: #fff;
+            padding: 1rem 1.5rem;
+            border: none;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .custom-btn {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.25rem;
+            border-radius: 1rem;
+            background: #fff;
+            color: #0070b7;
+            font-weight: bold;
+            padding: 1rem 1.5rem;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            margin-bottom: 2rem;
+        }
+        .custom-btn:hover {
+            background: #e0e0e0;
+            color: #005a8c;
+        }
+        .custom-form {
+            margin-bottom: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-[#0070b7] text-white min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-md p-8 bg-gray-800 rounded-lg shadow-lg" style="box-sizing:border-box;">
+        <h1 class="text-3xl font-bold mb-8 text-center" style="font-family: 'Montserrat', sans-serif;">Imposter Game</h1>
+        <form action="{% url 'create_room' %}" method="get" class="custom-form">
+            <input type="text" name="host" placeholder="Dein Name (Spielleiter)" required class="custom-input">
+            <button type="submit" class="custom-btn">Raum erstellen</button>
+        </form>
+        <form action="{% url 'join_room' %}" method="post" class="flex flex-col gap-4">
+            {% csrf_token %}
+            <input type="text" name="room_name" placeholder="Raumname" required class="custom-input">
+            <button type="submit" class="custom-btn">Raum beitreten</button>
+        </form>
+    </div>
+</body>
+</html>
